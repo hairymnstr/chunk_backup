@@ -38,20 +38,61 @@ void md5_transform(struct md_context *context) {
   c = context->h2;
   d = context->h3;
   
-  for(j=0;j<64;j++) {
-    if(j < 16) {
-      f = (b & c) | ((~b) & d);
-      g = j;
-    } else if(j < 32) {
-      f = (d & b) | ((~d) & c);
-      g = (5*j + 1) % 16;
-    } else if(j < 48) {
-      f = b ^ c ^ d;
-      g = (3 * j + 5) % 16;
-    } else {
-      f = c ^ (b | (~d));
-      g = (7*j) % 16;
-    }
+//   for(j=0;j<64;j++) {
+//     if(j < 16) {
+//       f = (b & c) | ((~b) & d);
+//       g = j;
+//     } else if(j < 32) {
+//       f = (d & b) | ((~d) & c);
+//       g = (5*j + 1) % 16;
+//     } else if(j < 48) {
+//       f = b ^ c ^ d;
+//       g = (3 * j + 5) % 16;
+//     } else {
+//       f = c ^ (b | (~d));
+//       g = (7*j) % 16;
+//     }
+//     temp = d;
+//     d = c;
+//     c = b;
+//     x = (a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4])));
+//     b = b + leftrotate(x, r[j]);
+//     a = temp;
+//   }
+  
+  for(j=0;j<16;j++) {
+    f = (b & c) | ((~b) & d);
+    g = j;
+    temp = d;
+    d = c;
+    c = b;
+    x = (a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4])));
+    b = b + leftrotate(x, r[j]);
+    a = temp;
+  }
+  for(j=16;j<32;j++) {
+    f = (d & b) | ((~d) & c);
+    g = (5*j + 1) % 16;
+    temp = d;
+    d = c;
+    c = b;
+    x = (a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4])));
+    b = b + leftrotate(x, r[j]);
+    a = temp;
+  }
+  for(j=32;j<48;j++) {
+    f = b ^ c ^ d;
+    g = (3 * j + 5) % 16;
+    temp = d;
+    d = c;
+    c = b;
+    x = (a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4])));
+    b = b + leftrotate(x, r[j]);
+    a = temp;
+  }
+  for(j=48;j<64;j++) {
+    f = c ^ (b | (~d));
+    g = (7*j) % 16;
     temp = d;
     d = c;
     c = b;
