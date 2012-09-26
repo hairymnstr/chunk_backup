@@ -4,8 +4,9 @@
 #include <string.h>
 #include "hash.h"
 
+// 32 bit arbitrary offset rotate rather than shift
 #define leftrotate(x, c) ((x << c) | (x >> (32-c)))
-typedef uint32_t hash_chunk[16];
+
 //r specifies the per-round shift amounts
 const uint32_t r[64] = {7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
                         5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
@@ -30,19 +31,102 @@ const uint32_t k[64] = {0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
                         0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
                         0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391};
 
-//Initialize variables:
-// var int h0 := 0x67452301   //A
-// var int h1 := 0xefcdab89   //B
-// var int h2 := 0x98badcfe   //C
-// var int h3 := 0x10325476   //D
+void md5_transform(struct md_context *context) {
+  uint32_t a, b, c, d, f, g, j, temp;
+  a = context->h0;
+  b = context->h1;
+  c = context->h2;
+  d = context->h3;
+  
+  for(j=0;j<64;j++) {
+    if(j < 16) {
+      f = (b & c) | ((~b) & d);
+      g = j;
+    } else if(j < 32) {
+      f = (d & b) | ((~d) & c);
+      g = (5*j + 1) % 16;
+    } else if(j < 48) {
+      f = b ^ c ^ d;
+      g = (3 * j + 5) % 16;
+    } else {
+      f = c ^ (b | (~d));
+      g = (7*j) % 16;
+    }
+    temp = d;
+    d = c;
+    c = b;
+    b = b + leftrotate((a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4]))), r[j]);
+    a = temp;
+  }
+  context->h0 += a;
+  context->h1 += b;
+  context->h2 += c;
+  context->h3 += d;
+}
+
+void md5_start(struct md_context *context) {
+  context->h0 = 0x67452301;
+  context->h1 = 0xefcdab89;
+  context->h2 = 0x98badcfe;
+  context->h3 = 0x10325476;
+  
+  context->count = 0;
+  
+  memset(context->buffer, 0, 64);
+  
+  memset(context->digest, 0, 16);
+  
+  return;
+}
+
+void md5_update(struct md_context *context, uint8_t *chunk, uint64_t chunk_size) {
+  int buflen = context->count & 63;
+  context->count += chunk_size;
+  
+  if((buflen + chunk_size) < 64) {
+    memcpy(&context->buffer[buflen], chunk, chunk_size);
+    return;
+  }
+  
+  memcpy(&context->buffer[buflen], chunk, 64 - buflen);
+  md5_transform(context);
+  chunk_size -= (64 - buflen);
+  while(chunk_size >= 64) {
+    memcpy(context->buffer, chunk, 64);
+    md5_transform(context);
+    chunk_size -= 64;
+    chunk += 64;
+  }
+  memcpy(context->buffer, chunk, chunk_size);
+  return;
+}
+
+void md5_finish(struct md_context *context) {
+  int buflen = context->count & 63;
+  
+  context->buffer[buflen++] = 0x80;
+  memset(&context->buffer[buflen], 0, 64-buflen);
+  if(buflen > 56) {
+    md5_transform(context);
+    memset(context->buffer, 0, 64);
+  }
+  *(uint64_t *)(&context->buffer[56]) = context->count * 8;
+  md5_transform(context);
+  *(uint32_t *)(&context->digest[0]) = context->h0;
+  *(uint32_t *)(&context->digest[4]) = context->h1;
+  *(uint32_t *)(&context->digest[8]) = context->h2;
+  *(uint32_t *)(&context->digest[12]) = context->h3;
+  return;
+}
 
 int main(int argc, char *argv[]) {
-  uint32_t h0 = 0x67452301;
-  uint32_t h1 = 0xefcdab89;
-  uint32_t h2 = 0x98badcfe;
-  uint32_t h3 = 0x10325476;
-  uint32_t a, b, c, d, f, g, i, j, temp;
-  
+  // magic constants needed at the start
+//   uint32_t h0 = 0x67452301;
+//   uint32_t h1 = 0xefcdab89;
+//   uint32_t h2 = 0x98badcfe;
+//   uint32_t h3 = 0x10325476;
+//   uint32_t a, b, c, d, f, g, i, j, temp;
+  uint32_t i;
   
   if(argc < 2) {
     fprintf(stderr, "Please enter a string to be hashed as the first argument\n");
@@ -51,66 +135,77 @@ int main(int argc, char *argv[]) {
   
   uint64_t msglen = strlen(argv[1]);
   
-  uint8_t *message;
+  struct md_context context;
   
-  printf("msglen = %d (%016x)\n", msglen, msglen*8);
-  
-  uint64_t msglen_chunks = msglen / sizeof(hash_chunk);
-  
-  if((msglen + 1) % 64 > 56) {
-    msglen_chunks += 2;
-  } else {
-    msglen_chunks += 1;
+  md5_start(&context);
+  md5_update(&context, argv[1], msglen);
+  for(i=0;i<16;i++) {
+    printf("%08x\n", *(uint32_t *)(&context.buffer[i*4]));
   }
+  printf("%lu\n", context.count);
+  md5_finish(&context);
   
-  message = (uint8_t *)malloc(64 * msglen_chunks);
-  memset(message, 0, 64 * msglen_chunks);
-  strncpy(message, argv[1], msglen);
-  message[msglen] = 0x80;
-  *(uint64_t *)(&message[64 * msglen_chunks-8]) = (uint64_t)(msglen * 8l);
   
-  for(i=0;i<msglen_chunks * 16;i++) {
-    printf("%08x\n", *(uint32_t *)(&message[i*4]));
-  }
-  for(i=0;i<msglen_chunks;i++) {
-    a = h0;
-    b = h1;
-    c = h2;
-    d = h3;
-  
-    for(j=0;j<64;j++) {
-      if(j < 16) {
-        f = (b & c) | ((~b) & d);
-        g = j;
-      } else if(j < 32) {
-        f = (d & b) | ((~d) & c);
-        g = (5*j + 1) % 16;
-      } else if(j < 48) {
-        f = b ^ c ^ d;
-        g = (3 * j + 5) % 16;
-      } else {
-        f = c ^ (b | (~d));
-        g = (7*j) % 16;
-      }
-      temp = d;
-      d = c;
-      c = b;
-      b = b + leftrotate((a + f + k[j] + (*(uint32_t *)(&message[i*64 + g * 4]))), r[j]);
-      a = temp;
-    }
-    h0 += a;
-    h1 += b;
-    h2 += c;
-    h3 += d;
-  }
-  uint8_t digest[16];
-  *(uint32_t *)(&digest[0]) = h0;
-  *(uint32_t *)(&digest[4]) = h1;
-  *(uint32_t *)(&digest[8]) = h2;
-  *(uint32_t *)(&digest[12]) = h3;
+//   uint8_t *message;
+//   
+//   printf("msglen = %d (%016x)\n", msglen, msglen*8);
+//   
+//   uint64_t msglen_chunks = msglen / sizeof(hash_chunk);
+//   
+//   if((msglen + 1) % 64 > 56) {
+//     msglen_chunks += 2;
+//   } else {
+//     msglen_chunks += 1;
+//   }
+//   
+//   message = (uint8_t *)malloc(64 * msglen_chunks);
+//   memset(message, 0, 64 * msglen_chunks);
+//   strncpy(message, argv[1], msglen);
+//   message[msglen] = 0x80;
+//   *(uint64_t *)(&message[64 * msglen_chunks-8]) = (uint64_t)(msglen * 8l);
+//   
+//   for(i=0;i<msglen_chunks * 16;i++) {
+//     printf("%08x\n", *(uint32_t *)(&message[i*4]));
+//   }
+//   for(i=0;i<msglen_chunks;i++) {
+//     a = h0;
+//     b = h1;
+//     c = h2;
+//     d = h3;
+//   
+//     for(j=0;j<64;j++) {
+//       if(j < 16) {
+//         f = (b & c) | ((~b) & d);
+//         g = j;
+//       } else if(j < 32) {
+//         f = (d & b) | ((~d) & c);
+//         g = (5*j + 1) % 16;
+//       } else if(j < 48) {
+//         f = b ^ c ^ d;
+//         g = (3 * j + 5) % 16;
+//       } else {
+//         f = c ^ (b | (~d));
+//         g = (7*j) % 16;
+//       }
+//       temp = d;
+//       d = c;
+//       c = b;
+//       b = b + leftrotate((a + f + k[j] + (*(uint32_t *)(&message[i*64 + g * 4]))), r[j]);
+//       a = temp;
+//     }
+//     h0 += a;
+//     h1 += b;
+//     h2 += c;
+//     h3 += d;
+//   }
+//   uint8_t digest[16];
+//   *(uint32_t *)(&digest[0]) = h0;
+//   *(uint32_t *)(&digest[4]) = h1;
+//   *(uint32_t *)(&digest[8]) = h2;
+//   *(uint32_t *)(&digest[12]) = h3;
   
   for(i=0;i<16;i++) {
-    printf("%02x", digest[i]);
+    printf("%02x", context.digest[i]);
   }
   printf("\n");
   
