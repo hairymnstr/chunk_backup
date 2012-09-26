@@ -91,6 +91,7 @@ void md5_update(struct md_context *context, uint8_t *chunk, uint64_t chunk_size)
   memcpy(&context->buffer[buflen], chunk, 64 - buflen);
   md5_transform(context);
   chunk_size -= (64 - buflen);
+  chunk += (64 - buflen);
   while(chunk_size >= 64) {
     memcpy(context->buffer, chunk, 64);
     md5_transform(context);
@@ -127,22 +128,35 @@ int main(int argc, char *argv[]) {
 //   uint32_t h3 = 0x10325476;
 //   uint32_t a, b, c, d, f, g, i, j, temp;
   uint32_t i;
+  uint32_t l;
+  FILE *fp;
+  uint8_t buffer[1024 * 1024];
   
   if(argc < 2) {
     fprintf(stderr, "Please enter a string to be hashed as the first argument\n");
     exit(-2);
   }
   
-  uint64_t msglen = strlen(argv[1]);
+//   uint64_t msglen = strlen(argv[1]);
   
   struct md_context context;
-  
+
+  fp = fopen(argv[1], "rb");
   md5_start(&context);
-  md5_update(&context, argv[1], msglen);
-  for(i=0;i<16;i++) {
-    printf("%08x\n", *(uint32_t *)(&context.buffer[i*4]));
+  
+  l = fread(&buffer, 1, 1024 * 1024, fp);
+  
+  while(l == (1024 * 1024)) {
+    md5_update(&context, buffer, 1024 * 1024);
+    l = fread(&buffer, 1, 1024 * 1024, fp);
   }
-  printf("%lu\n", context.count);
+  if(l < (1024 * 1024))
+    md5_update(&context, buffer, l);
+
+//   for(i=0;i<16;i++) {
+//     printf("%08x\n", *(uint32_t *)(&context.buffer[i*4]));
+//   }
+//   printf("%lu\n", context.count);
   md5_finish(&context);
   
   
