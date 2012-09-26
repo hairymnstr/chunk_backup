@@ -32,7 +32,7 @@ const uint32_t k[64] = {0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
                         0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391};
 
 void md5_transform(struct md_context *context) {
-  uint32_t a, b, c, d, f, g, j, temp;
+  uint32_t a, b, c, d, f, g, j, x, temp;
   a = context->h0;
   b = context->h1;
   c = context->h2;
@@ -55,7 +55,8 @@ void md5_transform(struct md_context *context) {
     temp = d;
     d = c;
     c = b;
-    b = b + leftrotate((a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4]))), r[j]);
+    x = (a + f + k[j] + (*(uint32_t *)(&context->buffer[g * 4])));
+    b = b + leftrotate(x, r[j]);
     a = temp;
   }
   context->h0 += a;
