@@ -81,6 +81,7 @@ void md5_start(struct md_context *context) {
 }
 
 void md5_update(struct md_context *context, uint8_t *chunk, uint64_t chunk_size) {
+  uint8_t *temp;
   int buflen = context->count & 63;
   context->count += chunk_size;
   
