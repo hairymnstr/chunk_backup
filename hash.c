@@ -173,7 +173,8 @@ int main(int argc, char *argv[]) {
   uint32_t i;
   uint32_t l;
   FILE *fp;
-  uint8_t buffer[1024 * 1024];
+  uint8_t *buffer;//[100 * 1024 * 1024];
+  buffer = (uint8_t *)malloc(100 * 1024 * 1024);
   
   if(argc < 2) {
     fprintf(stderr, "Please enter a string to be hashed as the first argument\n");
@@ -187,13 +188,13 @@ int main(int argc, char *argv[]) {
   fp = fopen(argv[1], "rb");
   md5_start(&context);
   
-  l = fread(&buffer, 1, 1024 * 1024, fp);
+  l = fread(buffer, 1, 100 * 1024 * 1024, fp);
   
-  while(l == (1024 * 1024)) {
-    md5_update(&context, buffer, 1024 * 1024);
-    l = fread(&buffer, 1, 1024 * 1024, fp);
+  while(l == (100 * 1024 * 1024)) {
+    md5_update(&context, buffer, 100 * 1024 * 1024);
+    l = fread(buffer, 1, 100 * 1024 * 1024, fp);
   }
-  if(l < (1024 * 1024))
+  if(l < (100 * 1024 * 1024))
     md5_update(&context, buffer, l);
 
 //   for(i=0;i<16;i++) {
