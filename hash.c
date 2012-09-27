@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 #include "hash.h"
 
 // 32 bit arbitrary offset rotate rather than shift
@@ -185,7 +186,11 @@ int main(int argc, char *argv[]) {
   
   struct md_context context;
 
-  fp = fopen(argv[1], "rb");
+  if(!(fp = fopen(argv[1], "rb"))) {
+    fprintf(stderr, "File couldn't be read.\n");
+    fprintf(stderr, "%s\n", strerror(errno));
+    exit(1);
+  }
   md5_start(&context);
   
   l = fread(buffer, 1, 100 * 1024 * 1024, fp);
