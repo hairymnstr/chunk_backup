@@ -2,12 +2,19 @@
 #define HASH_H 1
 
 struct md_context {
-  uint32_t h0;
-  uint32_t h1;
-  uint32_t h2;
-  uint32_t h3;
+//   union {
+  uint32_t h[4];
+//     uint32_t h1;
+//     uint32_t h2;
+//     uint32_t h3;
   
   uint8_t digest[16];
+//   };
+  
+//   uint32_t h0;
+//   uint32_t h1;
+//   uint32_t h2;
+//   uint32_t h3;
   
   uint64_t count;
   

@@ -34,10 +34,10 @@ const uint32_t k[64] = {0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
 
 void md5_transform(struct md_context *context) {
   uint32_t a, b, c, d, f, g, j, x, temp;
-  a = context->h0;
-  b = context->h1;
-  c = context->h2;
-  d = context->h3;
+  a = context->h[0];
+  b = context->h[1];
+  c = context->h[2];
+  d = context->h[3];
   
 //   for(j=0;j<64;j++) {
 //     if(j < 16) {
@@ -62,7 +62,7 @@ void md5_transform(struct md_context *context) {
 //   }
   
   for(j=0;j<16;j++) {
-    f = (b & c) | ((~b) & d);
+    f = ((c ^ d) & b) ^ d; //(b & c) | ((~b) & d);
     g = j;
     temp = d;
     d = c;
@@ -72,7 +72,7 @@ void md5_transform(struct md_context *context) {
     a = temp;
   }
   for(j=16;j<32;j++) {
-    f = (d & b) | ((~d) & c);
+    f = ((b ^ c) & d) ^ c;//(d & b) | ((~d) & c);
     g = (5*j + 1) % 16;
     temp = d;
     d = c;
@@ -101,29 +101,29 @@ void md5_transform(struct md_context *context) {
     b = b + leftrotate(x, r[j]);
     a = temp;
   }
-  context->h0 += a;
-  context->h1 += b;
-  context->h2 += c;
-  context->h3 += d;
+  context->h[0] += a;
+  context->h[1] += b;
+  context->h[2] += c;
+  context->h[3] += d;
 }
 
 void md5_start(struct md_context *context) {
-  context->h0 = 0x67452301;
-  context->h1 = 0xefcdab89;
-  context->h2 = 0x98badcfe;
-  context->h3 = 0x10325476;
+  context->h[0] = 0x67452301;
+  context->h[1] = 0xefcdab89;
+  context->h[2] = 0x98badcfe;
+  context->h[3] = 0x10325476;
   
   context->count = 0;
   
   memset(context->buffer, 0, 64);
   
-  memset(context->digest, 0, 16);
+//   memset(context->digest, 0, 16);
   
   return;
 }
 
 void md5_update(struct md_context *context, uint8_t *chunk, uint64_t chunk_size) {
-  uint8_t *temp;
+//   uint8_t *temp;
   int buflen = context->count & 63;
   context->count += chunk_size;
   
@@ -157,10 +157,11 @@ void md5_finish(struct md_context *context) {
   }
   *(uint64_t *)(&context->buffer[56]) = context->count * 8;
   md5_transform(context);
-  *(uint32_t *)(&context->digest[0]) = context->h0;
-  *(uint32_t *)(&context->digest[4]) = context->h1;
-  *(uint32_t *)(&context->digest[8]) = context->h2;
-  *(uint32_t *)(&context->digest[12]) = context->h3;
+  memcpy(context->digest, context->h, 16);
+//   *(uint32_t *)(&context->digest[0]) = context->h0;
+//   *(uint32_t *)(&context->digest[4]) = context->h1;
+//   *(uint32_t *)(&context->digest[8]) = context->h2;
+//   *(uint32_t *)(&context->digest[12]) = context->h3;
   return;
 }
 
