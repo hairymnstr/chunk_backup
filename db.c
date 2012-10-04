@@ -7,8 +7,21 @@ sqlite3 *db;
 
 int db_create_tables() {
   char sql[1024];
+  sqlite3_stmt *statement;
   
-  strncpy(sql, "CREATE TABLE files (hash INTEGER PRIMARY KEY, lat INTEGER, lon INTEGER)"
+  strncpy(sql, "CREATE TABLE files (fid INTEGER PRIMARY KEY, hash_hi INTEGER, hash_lo INTEGER, ctime INTEGER, atime INTEGER, mtime INTEGER, size INTEGER)", 1024);
+  sqlite3_prepare(db, sql, strlen(sql), &statement, NULL);
+  
+  int s = sqlite3_step(statement);
+  sqlite3_finalize(statement);
+  if(!(s == SQLITE_DONE)) {
+    fprintf(stderr, "Failed to initialise the database tables\n");
+    fprintf(stderr, "%s %d\n", sqlite3_errmsg(db), s);
+    return -1;
+  }
+  
+  return 0;
+}
 
 int db_init(const char *dbfile) {
   char sql[1024];
