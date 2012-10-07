@@ -53,3 +53,20 @@ int db_init(const char *dbfile) {
   }
   
 }
+
+int db_insert(FileRecord *rec) {
+  char sql[] = "INSERT INTO files (fid, hash_hi, hash_lo, ctime, atime, mtime, size) VALUES (?,?,?,?,?,?,?)";
+  sqlite3_stmt *statement;
+  sqlite3_prepare(db, sql, strlen(sql), &statement, NULL);
+  sqlite3_bind_int64(statement, 0, 1);
+  sqlite3_bind_int64(statement, 1, rec->hash_hi);
+  sqlite3_bind_int64(statement, 2, rec->hash_lo);
+  sqlite3_bind_int64(statement, 3, rec->ctime);
+  sqlite3_bind_int64(statement, 4, rec->atime);
+  sqlite3_bind_int64(statement, 5, rec->mtime);
+  sqlite3_bind_int64(statement, 6, rec->size);
+  
+  int s = sqlite3_step(statement);
+  printf("%d\n", s);
+  return 0;
+}
