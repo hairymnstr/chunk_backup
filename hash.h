@@ -1,6 +1,10 @@
 #ifndef HASH_H
 #define HASH_H 1
 
+#include <stdint.h>
+
+#define BUFSIZE (1024 * 1024)
+
 struct md_context {
 //   union {
   uint32_t h[4];
@@ -20,5 +24,7 @@ struct md_context {
   
   uint8_t buffer[64];
 };
+
+int md5_file(const char *path, uint8_t hash[16]);
 
 #endif /* ifndef HASH_H */

@@ -165,118 +165,141 @@ void md5_finish(struct md_context *context) {
   return;
 }
 
-int main(int argc, char *argv[]) {
-  // magic constants needed at the start
-//   uint32_t h0 = 0x67452301;
-//   uint32_t h1 = 0xefcdab89;
-//   uint32_t h2 = 0x98badcfe;
-//   uint32_t h3 = 0x10325476;
-//   uint32_t a, b, c, d, f, g, i, j, temp;
-  uint32_t i;
+int md5_file(const char *path, uint8_t hash[16]) {
+  uint8_t *buffer;
   uint32_t l;
   FILE *fp;
-  uint8_t *buffer;//[100 * 1024 * 1024];
-  buffer = (uint8_t *)malloc(100 * 1024 * 1024);
-  
-  if(argc < 2) {
-    fprintf(stderr, "Please enter a string to be hashed as the first argument\n");
-    exit(-2);
-  }
-  
-//   uint64_t msglen = strlen(argv[1]);
   
   struct md_context context;
-
-  if(!(fp = fopen(argv[1], "rb"))) {
+  
+  buffer = (uint8_t *)malloc(BUFSIZE);
+  if(!(fp = fopen(path, "rb"))) {
     fprintf(stderr, "File couldn't be read.\n");
     fprintf(stderr, "%s\n", strerror(errno));
-    exit(1);
+    return -1;
   }
   md5_start(&context);
   
-  l = fread(buffer, 1, 100 * 1024 * 1024, fp);
-  
-  while(l == (100 * 1024 * 1024)) {
-    md5_update(&context, buffer, 100 * 1024 * 1024);
-    l = fread(buffer, 1, 100 * 1024 * 1024, fp);
+  l = fread(buffer, 1, BUFSIZE, fp);
+  while(l == BUFSIZE) {
+    md5_update(&context, buffer, BUFSIZE);
+    l = fread(buffer, 1, BUFSIZE, fp);
   }
-  if(l < (100 * 1024 * 1024))
-    md5_update(&context, buffer, l);
-
-//   for(i=0;i<16;i++) {
-//     printf("%08x\n", *(uint32_t *)(&context.buffer[i*4]));
-//   }
-//   printf("%lu\n", context.count);
+  md5_update(&context, buffer, l);
+  
   md5_finish(&context);
   
-  
-//   uint8_t *message;
-//   
-//   printf("msglen = %d (%016x)\n", msglen, msglen*8);
-//   
-//   uint64_t msglen_chunks = msglen / sizeof(hash_chunk);
-//   
-//   if((msglen + 1) % 64 > 56) {
-//     msglen_chunks += 2;
-//   } else {
-//     msglen_chunks += 1;
-//   }
-//   
-//   message = (uint8_t *)malloc(64 * msglen_chunks);
-//   memset(message, 0, 64 * msglen_chunks);
-//   strncpy(message, argv[1], msglen);
-//   message[msglen] = 0x80;
-//   *(uint64_t *)(&message[64 * msglen_chunks-8]) = (uint64_t)(msglen * 8l);
-//   
-//   for(i=0;i<msglen_chunks * 16;i++) {
-//     printf("%08x\n", *(uint32_t *)(&message[i*4]));
-//   }
-//   for(i=0;i<msglen_chunks;i++) {
-//     a = h0;
-//     b = h1;
-//     c = h2;
-//     d = h3;
-//   
-//     for(j=0;j<64;j++) {
-//       if(j < 16) {
-//         f = (b & c) | ((~b) & d);
-//         g = j;
-//       } else if(j < 32) {
-//         f = (d & b) | ((~d) & c);
-//         g = (5*j + 1) % 16;
-//       } else if(j < 48) {
-//         f = b ^ c ^ d;
-//         g = (3 * j + 5) % 16;
-//       } else {
-//         f = c ^ (b | (~d));
-//         g = (7*j) % 16;
-//       }
-//       temp = d;
-//       d = c;
-//       c = b;
-//       b = b + leftrotate((a + f + k[j] + (*(uint32_t *)(&message[i*64 + g * 4]))), r[j]);
-//       a = temp;
-//     }
-//     h0 += a;
-//     h1 += b;
-//     h2 += c;
-//     h3 += d;
-//   }
-//   uint8_t digest[16];
-//   *(uint32_t *)(&digest[0]) = h0;
-//   *(uint32_t *)(&digest[4]) = h1;
-//   *(uint32_t *)(&digest[8]) = h2;
-//   *(uint32_t *)(&digest[12]) = h3;
-  
-  for(i=0;i<16;i++) {
-    printf("%02x", context.digest[i]);
-  }
-  printf("\n");
-  
-//   printf("%08x%08x%08x%08x\n", h0, h1, h2, h3);
-  
-  exit(0);
+  memcpy(hash, context.digest, 16);
+  return 0;
 }
+
+// int main(int argc, char *argv[]) {
+//   // magic constants needed at the start
+//   uint32_t i;
+//   uint32_t l;
+//   FILE *fp;
+//   uint8_t *buffer;//[100 * 1024 * 1024];
+//   buffer = (uint8_t *)malloc(100 * 1024 * 1024);
+//   
+//   if(argc < 2) {
+//     fprintf(stderr, "Please enter a string to be hashed as the first argument\n");
+//     exit(-2);
+//   }
+//   
+// //   uint64_t msglen = strlen(argv[1]);
+//   
+//   struct md_context context;
+// 
+//   if(!(fp = fopen(argv[1], "rb"))) {
+//     fprintf(stderr, "File couldn't be read.\n");
+//     fprintf(stderr, "%s\n", strerror(errno));
+//     exit(1);
+//   }
+//   md5_start(&context);
+//   
+//   l = fread(buffer, 1, 100 * 1024 * 1024, fp);
+//   
+//   while(l == (100 * 1024 * 1024)) {
+//     md5_update(&context, buffer, 100 * 1024 * 1024);
+//     l = fread(buffer, 1, 100 * 1024 * 1024, fp);
+//   }
+//   if(l < (100 * 1024 * 1024))
+//     md5_update(&context, buffer, l);
+// 
+// //   for(i=0;i<16;i++) {
+// //     printf("%08x\n", *(uint32_t *)(&context.buffer[i*4]));
+// //   }
+// //   printf("%lu\n", context.count);
+//   md5_finish(&context);
+//   
+//   
+// //   uint8_t *message;
+// //   
+// //   printf("msglen = %d (%016x)\n", msglen, msglen*8);
+// //   
+// //   uint64_t msglen_chunks = msglen / sizeof(hash_chunk);
+// //   
+// //   if((msglen + 1) % 64 > 56) {
+// //     msglen_chunks += 2;
+// //   } else {
+// //     msglen_chunks += 1;
+// //   }
+// //   
+// //   message = (uint8_t *)malloc(64 * msglen_chunks);
+// //   memset(message, 0, 64 * msglen_chunks);
+// //   strncpy(message, argv[1], msglen);
+// //   message[msglen] = 0x80;
+// //   *(uint64_t *)(&message[64 * msglen_chunks-8]) = (uint64_t)(msglen * 8l);
+// //   
+// //   for(i=0;i<msglen_chunks * 16;i++) {
+// //     printf("%08x\n", *(uint32_t *)(&message[i*4]));
+// //   }
+// //   for(i=0;i<msglen_chunks;i++) {
+// //     a = h0;
+// //     b = h1;
+// //     c = h2;
+// //     d = h3;
+// //   
+// //     for(j=0;j<64;j++) {
+// //       if(j < 16) {
+// //         f = (b & c) | ((~b) & d);
+// //         g = j;
+// //       } else if(j < 32) {
+// //         f = (d & b) | ((~d) & c);
+// //         g = (5*j + 1) % 16;
+// //       } else if(j < 48) {
+// //         f = b ^ c ^ d;
+// //         g = (3 * j + 5) % 16;
+// //       } else {
+// //         f = c ^ (b | (~d));
+// //         g = (7*j) % 16;
+// //       }
+// //       temp = d;
+// //       d = c;
+// //       c = b;
+// //       b = b + leftrotate((a + f + k[j] + (*(uint32_t *)(&message[i*64 + g * 4]))), r[j]);
+// //       a = temp;
+// //     }
+// //     h0 += a;
+// //     h1 += b;
+// //     h2 += c;
+// //     h3 += d;
+// //   }
+// //   uint8_t digest[16];
+// //   *(uint32_t *)(&digest[0]) = h0;
+// //   *(uint32_t *)(&digest[4]) = h1;
+// //   *(uint32_t *)(&digest[8]) = h2;
+// //   *(uint32_t *)(&digest[12]) = h3;
+//   
+//   for(i=0;i<16;i++) {
+//     printf("%02x", context.digest[i]);
+//   }
+//   printf("\n");
+//   
+// //   printf("%08x%08x%08x%08x\n", h0, h1, h2, h3);
+//   
+//   exit(0);
+// }
   
 //Pre-processing: adding a single 1 bit
 // append "1" bit to message    

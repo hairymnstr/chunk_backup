@@ -9,7 +9,7 @@ int db_create_tables() {
   char sql[1024];
   sqlite3_stmt *statement;
   
-  strncpy(sql, "CREATE TABLE files (fid INTEGER PRIMARY KEY, hash_hi INTEGER, hash_lo INTEGER, ctime INTEGER, atime INTEGER, mtime INTEGER, size INTEGER)", 1024);
+  strncpy(sql, "CREATE TABLE files (fid INTEGER PRIMARY KEY, hash_hi INTEGER, hash_lo INTEGER, ctime INTEGER, atime INTEGER, mtime INTEGER, size INTEGER, filename TEXT)", 1024);
   sqlite3_prepare(db, sql, strlen(sql), &statement, NULL);
   
   int s = sqlite3_step(statement);
@@ -55,18 +55,19 @@ int db_init(const char *dbfile) {
 }
 
 int db_insert(FileRecord *rec) {
-  char sql[] = "INSERT INTO files (fid, hash_hi, hash_lo, ctime, atime, mtime, size) VALUES (?,?,?,?,?,?,?)";
+  char sql[] = "INSERT INTO files (hash_hi, hash_lo, ctime, atime, mtime, size, filename) VALUES (?,?,?,?,?,?,?)";
   sqlite3_stmt *statement;
-  sqlite3_prepare(db, sql, strlen(sql), &statement, NULL);
-  sqlite3_bind_int64(statement, 0, 1);
-  sqlite3_bind_int64(statement, 1, rec->hash_hi);
-  sqlite3_bind_int64(statement, 2, rec->hash_lo);
-  sqlite3_bind_int64(statement, 3, rec->ctime);
-  sqlite3_bind_int64(statement, 4, rec->atime);
-  sqlite3_bind_int64(statement, 5, rec->mtime);
-  sqlite3_bind_int64(statement, 6, rec->size);
-  
+  sqlite3_prepare_v2(db, sql, strlen(sql), &statement, NULL);
+  sqlite3_bind_int64(statement, 1, (sqlite3_int64)rec->hash_hi);
+  sqlite3_bind_int64(statement, 2, (sqlite3_int64)rec->hash_lo);
+  sqlite3_bind_int64(statement, 3, (sqlite3_int64)rec->ctime);
+  sqlite3_bind_int64(statement, 4, (sqlite3_int64)rec->atime);
+  sqlite3_bind_int64(statement, 5, (sqlite3_int64)rec->mtime);
+  sqlite3_bind_int64(statement, 6, (sqlite3_int64)rec->size);
+  sqlite3_bind_text(statement, 7, rec->filename, strlen(rec->filename), SQLITE_TRANSIENT);
   int s = sqlite3_step(statement);
-  printf("%d\n", s);
-  return 0;
+  if(s == SQLITE_DONE) {
+    return 0;
+  }
+  return -1;
 }

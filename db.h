@@ -11,6 +11,7 @@ typedef struct {
   uint64_t atime;
   uint64_t mtime;
   uint64_t size;
+  char filename[2048];
 } FileRecord;
 
 int db_init(const char *);
